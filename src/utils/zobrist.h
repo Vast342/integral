@@ -234,6 +234,8 @@ U64 HashEnPassant(const BoardState &state);
 
 U64 GenerateKey(const BoardState &state);
 
+U64 GeneratePawnKey(const BoardState &state);
+
 }  // namespace zobrist
 
 #endif  // INTEGRAL_ZOBRIST_H_

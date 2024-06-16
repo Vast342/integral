@@ -83,6 +83,7 @@ struct BoardState {
         fifty_moves_clock(0),
         en_passant(std::nullopt),
         zobrist_key(0ULL),
+        pawn_key(0ULL),
         checkers(0ULL),
         pinned(0ULL),
         phase(0) {
@@ -107,6 +108,8 @@ struct BoardState {
     // Insert the piece to the hash
     if constexpr (update_key) {
       zobrist_key ^= zobrist::HashSquare(square, *this, color, piece_type);
+      if (piece_type == PieceType::kPawn)
+        pawn_key ^= zobrist::HashSquare(square, *this, color, piece_type);
     }
   }
 
@@ -117,6 +120,8 @@ struct BoardState {
     // Remove the piece from the hash
     if constexpr (update_key) {
       zobrist_key ^= zobrist::HashSquare(square, *this, color, piece_type);
+      if (piece_type == PieceType::kPawn)
+        pawn_key ^= zobrist::HashSquare(square, *this, color, piece_type);
     }
 
     // Clear the piece from the bitboards
@@ -229,7 +234,7 @@ struct BoardState {
   U16 fifty_moves_clock;
   std::optional<Square> en_passant;
   CastleRights castle_rights;
-  U64 zobrist_key;
+  U64 zobrist_key, pawn_key;
   BitBoard checkers;
   BitBoard pinned;
   SideTable<ScorePair> piece_scores;

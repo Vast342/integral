@@ -155,7 +155,7 @@ Score Search::QuiescentSearch(Score alpha,
   }
 
   const Score static_eval =
-      can_use_tt_eval ? tt_entry.score : eval::Evaluate(state);
+      can_use_tt_eval ? tt_entry.score : move_history_.CorrectStaticEval(eval::Evaluate(state), board_.GetState().turn, board_.GetState().pawn_key);
 
   // Early beta cutoff
   if (static_eval >= beta || stack->ply >= kMaxPlyFromRoot) {
@@ -288,6 +288,7 @@ Score Search::PVSearch(int depth,
 
   if (!state.InCheck()) {
     stack->static_eval = eval::Evaluate(state);
+    stack->static_eval = move_history_.CorrectStaticEval(stack->static_eval, board_.GetState().turn, board_.GetState().pawn_key);
 
     // Adjust eval depending on if we can use the score stored in the TT
     if (tt_hit && can_use_tt_eval) {
@@ -520,6 +521,19 @@ Score Search::PVSearch(int depth,
   TranspositionTableEntry new_tt_entry(
       state.zobrist_key, depth, entry_flag, best_score, best_move);
   transposition_table.Save(state.zobrist_key, stack->ply, new_tt_entry);
+
+  // Update the correction history based on difference of static eval and best score vs. fail high / fail low
+  auto failHigh = entry_flag == TranspositionTable::Entry::kLowerBound;
+  auto failLow = entry_flag == TranspositionTable::Entry::kUpperBound;
+  if (
+    !board_.GetState().InCheck() &
+    (failLow || !best_move.IsTactical(state)) &&
+    !(failHigh && stack->static_eval >= best_score) &&
+    !(failLow && stack->static_eval < best_score)
+    ) {
+      int bonus = std::clamp((best_score - stack->static_eval) * depth / 8, -kCorrectionHistoryLimit / 4, kCorrectionHistoryLimit / 4);
+      move_history_.UpdateCorrectionHistory(bonus, board_.GetState().turn, board_.GetState().pawn_key);
+    } 
 
   return best_score;
 }

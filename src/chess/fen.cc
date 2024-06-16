@@ -72,6 +72,7 @@ BoardState StringToBoard(std::string_view fen_str) {
   stream >> state.fifty_moves_clock;
 
   state.zobrist_key = zobrist::GenerateKey(state);
+  state.pawn_key = zobrist::GeneratePawnKey(state);
 
   return state;
 }

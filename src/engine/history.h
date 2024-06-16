@@ -7,11 +7,14 @@
 class SearchStackEntry;
 
 constexpr int kFromToCombinations = kSquareCount * kSquareCount;
+constexpr int kCorrectionHistorySize = 16384;
+constexpr int kCorrectionHistoryLimit = 512;
 
 using KillerMoves = MultiArray<Move, kMaxPlyFromRoot, 2>;
 using ButterflyHistory = MultiArray<int, 2, kFromToCombinations>;
 using ContinuationEntry = MultiArray<int, 2, 6, 64>;
 using ContinuationHistory = MultiArray<ContinuationEntry, 2, 6, 64>;
+using CorrectionHistory = std::array<std::array<Score, kCorrectionHistorySize>, 2>;
 
 class MoveHistory {
  public:
@@ -39,6 +42,10 @@ class MoveHistory {
                          Color turn,
                          int depth,
                          SearchStackEntry *stack);
+  
+  Score CorrectStaticEval(Score staticEval, Color turn, U64 pawnHash);
+
+  void UpdateCorrectionHistory(int bonus, Color turn, U64 pawnHash);
 
   void Clear();
 
@@ -51,6 +58,7 @@ class MoveHistory {
   KillerMoves killer_moves_;
   std::unique_ptr<ButterflyHistory> butterfly_history_;
   std::unique_ptr<ContinuationHistory> cont_history_;
+  std::unique_ptr<CorrectionHistory> correction_history_;
 };
 
 #endif  // INTEGRAL_HISTORY_H

@@ -33,9 +33,8 @@ U64 HashSquare(Square square,
    * white king   11
    */
 
-  const int piece_idx =
-      kSquareCount * (static_cast<int>(piece) * 2 + color) +
-      kNumRanks * Rank(square) + File(square);
+  const int piece_idx = kSquareCount * (static_cast<int>(piece) * 2 + color) +
+                        kNumRanks * Rank(square) + File(square);
   return kRandomsArray[piece_idx];
 }
 
@@ -79,6 +78,21 @@ U64 GenerateKey(const BoardState &state) {
 
   return pieces ^ HashCastleRights(state.castle_rights) ^ HashEnPassant(state) ^
          HashTurn(state.turn);
+}
+
+U64 GeneratePawnKey(const BoardState &state) {
+  U64 pawns = 0;
+  for (int square = 0; square < kSquareCount; square++) {
+    PieceType pieceType = state.GetPieceType(square);
+    Color pieceColor = state.GetPieceColor(square);
+    if (pieceType != PieceType::kPawn)
+      continue;
+    const int piece_idx = kSquareCount * (static_cast<int>(pieceType) * 2 + pieceColor) +
+                          kNumRanks * Rank(square) + File(square);
+    pawns ^= kRandomsArray[piece_idx];
+  }
+
+  return pawns;
 }
 
 }  // namespace zobrist

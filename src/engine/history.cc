@@ -11,8 +11,8 @@ int HistoryBonus(int depth) {
 }
 
 // Linear interpolation of the bonus and maximum score
-int ScaleBonus(Score score, int bonus) {
-  return bonus - score * std::abs(bonus) / kHistoryGravity;
+int ScaleBonus(Score score, int bonus, int gravity = kHistoryGravity) {
+  return bonus - score * std::abs(bonus) / gravity;
 }
 
 // Flatten the move to an index
@@ -24,7 +24,8 @@ MoveHistory::MoveHistory(const BoardState &state)
     : state_(state),
       killer_moves_({}),
       butterfly_history_(std::make_unique<ButterflyHistory>()),
-      cont_history_(std::make_unique<ContinuationHistory>()) {}
+      cont_history_(std::make_unique<ContinuationHistory>()),
+      correction_history_(std::make_unique<CorrectionHistory>()) {}
 
 int MoveHistory::GetHistoryScore(Move move, Color turn) noexcept {
   return butterfly_history_->at(turn)[MoveIndex(move)];
@@ -108,6 +109,17 @@ void MoveHistory::UpdateContHistory(Move move,
   }
 }
 
+Score MoveHistory::CorrectStaticEval(Score staticEval, Color turn, U64 pawnHash) {
+  Score correctionScore = correction_history_->at(turn)[pawnHash & (kCorrectionHistorySize - 1)];
+  Score adjustedScore = staticEval + (correctionScore * std::abs(correctionScore)) / 16384;
+  return std::clamp(adjustedScore, -kMateScore + kMaxPlyFromRoot + 1, kMateScore - kMaxPlyFromRoot - 1);
+}
+
+void MoveHistory::UpdateCorrectionHistory(int bonus, Color turn, U64 pawnHash) {
+  Score& correctionScore = correction_history_->at(turn)[pawnHash & (kCorrectionHistorySize - 1)];
+  correctionScore += ScaleBonus(correctionScore, bonus, kCorrectionHistoryLimit);
+}
+
 void MoveHistory::ClearKillers() {
   for (auto &killers : killer_moves_) {
     killers.fill(Move::NullMove());
@@ -118,6 +130,7 @@ void MoveHistory::Clear() {
   butterfly_history_ = std::make_unique<ButterflyHistory>();
   killer_moves_ = KillerMoves();
   cont_history_ = std::make_unique<ContinuationHistory>();
+  correction_history_ = std::make_unique<CorrectionHistory>();
 }
 
 void MoveHistory::ClearKillers(U16 ply) {

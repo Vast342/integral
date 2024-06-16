@@ -117,3 +117,9 @@ fabric.properties
 .idea/**/azureSettings.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/clion
+
+# Build directory for if you build with Make
+build
+
+# Visual Studio Code files
+.vscode
